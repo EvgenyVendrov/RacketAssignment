@@ -97,20 +97,25 @@
   (define (eval expr)
     (cases expr
       [(Num n) (list n)]
-      [(Add l r) (+ (first(eval l)) (first(eval r)))]
-      [(Sub l r) (- (first(eval l)) (first(eval r)))]
-      [(Mul l r) (* (first(eval l)) (first(eval r)))]
-      [(Div l r) (/ (first(eval l)) (first(eval r)))]
-      [(Sqrt v) (let ([evaledVal (first(eval v))])
-                   (if (negative? evaledVal)
-                       (error 'eval "`sqrt' requires a nonnegative input") (list(sqrt evaledVal))))]
+      [(Add l r) (list(+ (first(eval l)) (first(eval r))))]
+      [(Sub l r) (list(- (first(eval l)) (first(eval r))))]
+      [(Mul l r) (list(* (first(eval l)) (first(eval r))))]
+      [(Div l r) (list(/ (first(eval l)) (first(eval r))))]
+      [(Sqrt e) (sqrt+ (eval e))] 
       [(With bound-id named-expr bound-body)
-       (first(eval (subst bound-body
+       (list(first(eval (subst bound-body
                     bound-id
-                    (Num (first(eval named-expr))))))]
+                    (Num (first(eval named-expr)))))))]
       [(Id name) (error 'eval "free identifier: ~s" name)]))
 
-
+(: sqrt+ : (Listof Number) -> (Listof Number))
+;; a version of `sqrt' that takes a list of numbers, and returna list
+;; with twice the elements, holding the two roots of each of the inputs; 
+;; throws an error if any input is negative. 
+(define (sqrt+ ns)
+ (cond [(null? ns) ns]
+ [(< (first ns) 0) (error 'eval "`sqrt' requires a nonnegative input")]
+ [else (cons (sqrt(first ns))(cons (- 0 (sqrt (first ns))) (sqrt+(rest ns))))])) 
 
 (: run : String ->  (Listof Number))
   ;; evaluate a MUWAE program contained in a string
@@ -118,17 +123,19 @@
     (eval (parse str)))
 
   ;; tests
-  (test (run "5") => 5)
-  (test (run "{+ 5 5}") => 10)
-  (test (run "{with {x {+ 5 5}} {+ x x}}") => 20)
-  (test (run "{with {x 5} {+ x x}}") => 10)
-  (test (run "{with {x {+ 5 5}} {with {y {- x 3}} {+ y y}}}") => 14)
-  (test (run "{with {x 5} {with {y {- x 3}} {+ y y}}}") => 4)
-  (test (run "{with {x 5} {+ x {with {x 3} 10}}}") => 15)
-  (test (run "{with {x 5} {+ x {with {x 3} x}}}") => 8)
-  (test (run "{with {x 5} {+ x {with {y 3} x}}}") => 10)
-  (test (run "{with {x 5} {with {y x} y}}") => 5)
-  (test (run "{with {x 5} {with {x x} x}}") => 5)
+  (test (run "5") => '(5))
+  (test (run "{+ 5 5}") => '(10))
+  (test (run "{with {x {+ 5 5}} {+ x x}}") => '(20))
+  (test (run "{with {x 5} {+ x x}}") => '(10))
+  (test (run "{with {x {+ 5 5}} {with {y {- x 3}} {+ y y}}}") => '(14))
+  (test (run "{with {x 5} {with {y {- x 3}} {+ y y}}}") => '(4))
+  (test (run "{with {x 5} {+ x {with {x 3} 10}}}") => '(15))
+  (test (run "{with {x 5} {+ x {with {x 3} x}}}") => '(8))
+  (test (run "{with {x 5} {+ x {with {y 3} x}}}") => '(10))
+  (test (run "{with {x 5} {with {y x} y}}") => '(5))
+  (test (run "{with {x 5} {with {x x} x}}") => '(5))
   (test (run "{with {x 1} y}") =error> "free identifier")
-  (test (run "{sqrt 9}") => 3)  (test (run "{sqrt 1}") => 1)  (test (run "{sqrt 0}") => 0)  
+(test (run "{sqrt 9}") => '(3 -3))
+  (test (run "{sqrt 1}") => '(1 -1))
+  (test (run "{sqrt 0}") => '(0 0))  
   (test (run "{sqrt -1}") =error> "`sqrt' requires a nonnegative input")
