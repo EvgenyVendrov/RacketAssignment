@@ -7,7 +7,6 @@
                | { * <MUMUWAE > <MUMUWAE > }
                | { / <MUMUWAE > <MUMUWAE > }
                | { with { <id> <MUMUWAE > } <MUMUWAE > }
-               | { sqrt <MUMUWAE> }
                | <id>
   |#
 
@@ -18,7 +17,6 @@
     [Sub  MUWAE MUWAE]
     [Mul  MUWAE MUWAE]
     [Div  MUWAE MUWAE]
-    [Sqrt MUWAE]
     [Id   Symbol]
     [With Symbol MUWAE MUWAE])
 
@@ -37,7 +35,6 @@
       [(list '- lhs rhs) (Sub (parse-sexpr lhs) (parse-sexpr rhs))]
       [(list '* lhs rhs) (Mul (parse-sexpr lhs) (parse-sexpr rhs))]
       [(list '/ lhs rhs) (Div (parse-sexpr lhs) (parse-sexpr rhs))]
-      [(list 'sqrt val) (Sqrt (parse-sexpr val))]
       [else (error 'parse-sexpr "bad syntax in ~s" sexpr)]))
 
   (: parse : String -> MUMUWAE)
@@ -53,7 +50,6 @@
         {- E1 E2}[v/x]        = {- E1[v/x] E2[v/x]}
         {* E1 E2}[v/x]        = {* E1[v/x] E2[v/x]}
         {/ E1 E2}[v/x]        = {/ E1[v/x] E2[v/x]}
-        {sqrt E1}[v/x]        = {sqrt E1[v/x]}
         y[v/x]                = y
         x[v/x]                = v
         {with {y E1} E2}[v/x] = {with {y E1[v/x]} E2[v/x]}
