@@ -2,12 +2,12 @@
 
   #| BNF for the MUMUWAE  language:
        <MUMUWAE > ::= <num>
-               | { + <MUMUWAE > <MUMUWAE > }
-               | { - <MUMUWAE > <MUMUWAE > }
-               | { * <MUMUWAE > <MUMUWAE > }
-               | { / <MUMUWAE > <MUMUWAE > }
-               | { with { <id> <MUMUWAE > } <MUMUWAE > }
-               | { sqrt <MUMUWAE> }
+               | { + <MUWAE> <MUWAE> }
+               | { - <MUWAE> <MUWAE> }
+               | { * <MUWAE> <MUWAE> }
+               | { / <MUWAE> <MUWAE> }
+               | { with { <id> <MUWAE> } <MUWAE> }
+               | { sqrt <MUWAE> }
                | <id>
   |#
 
@@ -71,6 +71,7 @@
       [(Sub l r) (Sub (subst l from to) (subst r from to))]
       [(Mul l r) (Mul (subst l from to) (subst r from to))]
       [(Div l r) (Div (subst l from to) (subst r from to))]
+      [(Sqrt v)  (Sqrt(subst v from to))]
       [(Id name) (if (eq? name from) to expr)]
       [(With bound-id named-expr bound-body)
        (With bound-id
