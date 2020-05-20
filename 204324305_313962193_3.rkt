@@ -12,7 +12,7 @@
   |#
 
   ;; MUMUWAE  abstract syntax trees
-  (define-type MUMUWAE 
+  (define-type MUWAE 
     [Num  Number]
     [Add  MUWAE MUWAE]
     [Sub  MUWAE MUWAE]
@@ -40,7 +40,7 @@
       [(list 'sqrt val) (Sqrt (parse-sexpr val))]
       [else (error 'parse-sexpr "bad syntax in ~s" sexpr)]))
 
-  (: parse : String -> MUMUWAE)
+  (: parse : String -> MUWAE)
   ;; parses a string containing a MUWAE expression to a MUWAE AST
   (define (parse str)
     (parse-sexpr (string->sexpr str)))
@@ -86,6 +86,7 @@
        eval({- E1 E2}) = eval(E1) - eval(E2)
        eval({* E1 E2}) = eval(E1) * eval(E2)
        eval({/ E1 E2}) = eval(E1) / eval(E2)
+       eval({sqrt E1}) = eval((sqrt E1))
        eval(id)        = error!
        eval({with {x E1} E2}) = eval(E2[eval(E1)/x])
   |#
@@ -99,13 +100,17 @@
       [(Sub l r) (- (eval l) (eval r))]
       [(Mul l r) (* (eval l) (eval r))]
       [(Div l r) (/ (eval l) (eval r))]
+      [(Sqrt v) ((let ([evaledVal (eval v)])
+                   (if (negative? evaledVal) (error 'eval "'sqrt' requires a nonnegative input") (evaledVal))))]
       [(With bound-id named-expr bound-body)
        (eval (subst bound-body
                     bound-id
                     (Num (eval named-expr))))]
       [(Id name) (error 'eval "free identifier: ~s" name)]))
 
-  (: run : String -> Number)
+
+
+(: run : String -> Number)
   ;; evaluate a MUWAE program contained in a string
   (define (run str)
     (eval (parse str)))
@@ -123,3 +128,6 @@
   (test (run "{with {x 5} {with {y x} y}}") => 5)
   (test (run "{with {x 5} {with {x x} x}}") => 5)
   (test (run "{with {x 1} y}") =error> "free identifier")
+
+(test (run "{sqrt 9}") => 3)  (test (run "{sqrt 1}") => 1)  (test (run "{sqrt 0}") => 0)  
+(test (run "{sqrt -1}") =error> "`sqrt' requires a nonnegative input")
