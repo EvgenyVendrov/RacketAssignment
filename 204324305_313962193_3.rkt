@@ -87,31 +87,32 @@
        eval({* E1 E2}) = eval(E1) * eval(E2)
        eval({/ E1 E2}) = eval(E1) / eval(E2)
        eval({sqrt E1}) = (sqrt eval(E1))
+       eval(sqrt 0)    = error!  
        eval(id)        = error!
        eval({with {x E1} E2}) = eval(E2[eval(E1)/x])
   |#
 
-  (: eval : MUWAE -> Number)
+  (: eval : MUWAE -> (Listof Number))
   ;; evaluates MUWAE expressions by reducing them to numbers
   (define (eval expr)
     (cases expr
-      [(Num n) n]
-      [(Add l r) (+ (eval l) (eval r))]
-      [(Sub l r) (- (eval l) (eval r))]
-      [(Mul l r) (* (eval l) (eval r))]
-      [(Div l r) (/ (eval l) (eval r))]
-      [(Sqrt v) (let ([evaledVal (eval v)])
+      [(Num n) (list n)]
+      [(Add l r) (+ (first(eval l)) (first(eval r)))]
+      [(Sub l r) (- (first(eval l)) (first(eval r)))]
+      [(Mul l r) (* (first(eval l)) (first(eval r)))]
+      [(Div l r) (/ (first(eval l)) (first(eval r)))]
+      [(Sqrt v) (let ([evaledVal (first(eval v))])
                    (if (negative? evaledVal)
-                       (error 'eval "`sqrt' requires a nonnegative input") (sqrt evaledVal)))]
+                       (error 'eval "`sqrt' requires a nonnegative input") (list(sqrt evaledVal))))]
       [(With bound-id named-expr bound-body)
-       (eval (subst bound-body
+       (first(eval (subst bound-body
                     bound-id
-                    (Num (eval named-expr))))]
+                    (Num (first(eval named-expr))))))]
       [(Id name) (error 'eval "free identifier: ~s" name)]))
 
 
 
-(: run : String -> Number)
+(: run : String ->  (Listof Number))
   ;; evaluate a MUWAE program contained in a string
   (define (run str)
     (eval (parse str)))
