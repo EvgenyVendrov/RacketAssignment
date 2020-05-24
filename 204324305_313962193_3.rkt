@@ -13,7 +13,7 @@
 
   ;; MUMUWAE  abstract syntax trees
   (define-type MUWAE 
-    [Num  Number]
+    [Num  (Listof Number)]
     [Add  MUWAE MUWAE]
     [Sub  MUWAE MUWAE]
     [Mul  MUWAE MUWAE]
@@ -26,7 +26,7 @@
   ;; to convert s-expressions into MUMUWAEs
   (define (parse-sexpr sexpr)
     (match sexpr
-      [(number: n)    (Num n)]
+      [(number: n)    (Num (list n))]
       [(symbol: name) (Id name)]
       [(cons 'with more)
        (match sexpr
@@ -96,26 +96,40 @@
   ;; evaluates MUWAE expressions by reducing them to numbers
   (define (eval expr)
     (cases expr
-      [(Num n) (list n)]
-      [(Add l r) (list(+ (first(eval l)) (first(eval r))))]
-      [(Sub l r) (list(- (first(eval l)) (first(eval r))))]
-      [(Mul l r) (list(* (first(eval l)) (first(eval r))))]
-      [(Div l r) (list(/ (first(eval l)) (first(eval r))))]
+      [(Num n)  n]
+      [(Add l r) (bin-op + (eval l) (eval r))]
+      [(Sub l r) (bin-op - (eval l) (eval r))]
+      [(Mul l r) (bin-op * (eval l) (eval r))]
+      [(Div l r) (bin-op / (eval l) (eval r))]
       [(Sqrt e) (sqrt+ (eval e))] 
       [(With bound-id named-expr bound-body)
-       (list(first(eval (subst bound-body
+       (eval (subst bound-body
                     bound-id
-                    (Num (first(eval named-expr)))))))]
+                    (Num (eval named-expr))))]
       [(Id name) (error 'eval "free identifier: ~s" name)]))
 
 (: sqrt+ : (Listof Number) -> (Listof Number))
 ;; a version of `sqrt' that takes a list of numbers, and returna list
 ;; with twice the elements, holding the two roots of each of the inputs; 
 ;; throws an error if any input is negative. 
-(define (sqrt+ ns)
- (cond [(null? ns) ns]
- [(< (first ns) 0) (error 'eval "`sqrt' requires a nonnegative input")]
- [else (cons (sqrt(first ns))(cons (- 0 (sqrt (first ns))) (sqrt+(rest ns))))])) 
+  (define (sqrt+ ns)
+     (cond [(null? ns) ns]
+       [(< (first ns) 0) (error 'eval "`sqrt' requires a nonnegative input")]
+       [else (cons (sqrt(first ns))(cons (- 0 (sqrt (first ns))) (sqrt+(rest ns))))]))
+
+(: bin-op : (Number Number -> Number) (Listof Number) (Listof Number) -> (Listof Number))
+;; applies a binary numeric function on all combinations of numbers from
+;; the two input lists, and return the list of all of the results
+  (define (bin-op op ls rs)
+     (: helper : Number (Listof Number) -> (Listof Number))
+        (define (helper l rs)
+           (: f : Number -> Number)
+              (define (f number)
+               (op l  number))
+              (map f rs))
+    
+        (if (null? ls) null
+        (append (helper (first ls) rs) (bin-op op (rest ls) rs)))) 
 
 (: run : String ->  (Listof Number))
   ;; evaluate a MUWAE program contained in a string
@@ -139,3 +153,6 @@
   (test (run "{sqrt 1}") => '(1 -1))
   (test (run "{sqrt 0}") => '(0 0))  
   (test (run "{sqrt -1}") =error> "`sqrt' requires a nonnegative input")
+(test (run "{+ {sqrt 1} 3}") => '(4 2))
+(test (run "{+ {/ {+ {sqrt 1} 3} 2} {sqrt 100}}") => '(12 -8 11 -9))
+(test (run "{sqrt {+ 16 {* {+ 1 {sqrt 1}} {/ 9 2}}}}") => '(5 -5 4 -4))
