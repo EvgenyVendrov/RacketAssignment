@@ -252,16 +252,12 @@
   (define (freeInstanceList expr)
     (cases expr
       [(NumW n)  (list)]
-      [(AddW l r) (if (eq? l r) (freeInstanceList l)(append (freeInstanceList l) (freeInstanceList r)))]
-      [(SubW l r) (if (eq? l r) (freeInstanceList l)(append (freeInstanceList l) (freeInstanceList r)))]
-      [(MulW l r) (if (eq? l r) (freeInstanceList l)(append (freeInstanceList l) (freeInstanceList r)))]
-      [(DivW l r) (if (eq? l r) (freeInstanceList l)(append (freeInstanceList l) (freeInstanceList r)))]
-      [(WithW bound-id named-expr bound-body)
-       (freeInstanceList (substW bound-body
-                    bound-id
-                    named-expr))]
+      [(AddW l r) (append (freeInstanceList l) (freeInstanceList r))]
+      [(SubW l r) (append (freeInstanceList l) (freeInstanceList r))]
+      [(MulW l r) (append (freeInstanceList l) (freeInstanceList r))]
+      [(DivW l r) (append (freeInstanceList l) (freeInstanceList r))]
+      [(WithW bound-id named-expr bound-body)(append (freeInstanceList named-expr)(freeInstanceList (substW bound-body bound-id (NumW 777))))]
       [(IdW name) (list name)]))
-
 
 
 (test (freeInstanceList (parseW "w")) => '(w))
@@ -271,11 +267,18 @@
 (test (freeInstanceList (parseW "{with {x 1} y}")) => '(y))
 (test (freeInstanceList (parseW "{with {x 1} {* x y}}")) => '(y))
 (test (freeInstanceList (parseW "{with {x 1} {/ x y}}")) => '(y))
-(test (freeInstanceList(parseW "{with {x g} x}")) => '(g))
-(test (freeInstanceList(parseW "{with {x g}}")) =error> "bad `with' syntax in")
-(test (freeInstanceList(parseW "{ 8 {x g}}")) =error> "bad syntax in")
+(test (freeInstanceList (parseW "{with {x g} x}")) => '(g))
+(test (freeInstanceList (parseW "{with {x g}}")) =error> "bad `with' syntax in")
+(test (freeInstanceList (parseW "{ 8 {x g}}")) =error> "bad syntax in")
 (test (freeInstanceList (WithW 'x (IdW 'g) (AddW (IdW 'x) (IdW 'x)))) => '(g))
 (test (freeInstanceList (parseW "{with { y {/ z 3}  } {+ y y } }")) => '(z))
 (test (freeInstanceList (parseW "{with { y {/ z 3}  } {- y y } }")) => '(z))
 (test (freeInstanceList (parseW "{with { y {/ z 3}  } {* y y } }")) => '(z))
 (test (freeInstanceList (parseW "{with { y {/ z 3}  } {/ y y } }")) => '(z))
+(test (freeInstanceList (parseW "{with {x 1} {with {y 2} {+ x y}}}")) => '())
+(test (freeInstanceList (parseW "{with {x 1} {with {y 2} {+ x z}}}")) => '(z))
+(test (freeInstanceList (parseW "{with {x 1} {with {y 2} {+ y z}}}")) => '(z))
+(test (freeInstanceList (parseW "{with {x 1} {with {y 2} {+ a z}}}")) => '(a z))
+(test (freeInstanceList (parseW "{with {y b} {+ a z}}")) => '(b a z))
+(test (freeInstanceList (parseW "{with {x 1} {with {y b} {* a z}}}")) => '(b a z))
+(test (freeInstanceList (parseW "{with {x 1} {with {y b} {/ a z}}}")) => '(b a z))
