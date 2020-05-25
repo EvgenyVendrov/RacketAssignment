@@ -242,7 +242,7 @@
     [(IdW name) (if (eq? name from) to expr)]
     [(WithW bound-id named-expr bound-body)
      (WithW bound-id
-           (substW named-expr from to)
+           named-expr
            (if (eq? bound-id from)
                bound-body
                (substW bound-body from to)))]))
@@ -252,10 +252,10 @@
   (define (freeInstanceList expr)
     (cases expr
       [(NumW n)  (list)]
-      [(AddW l r) (append (freeInstanceList l) (freeInstanceList r))]
-      [(SubW l r) (append (freeInstanceList l) (freeInstanceList r))]
-      [(MulW l r) (append (freeInstanceList l) (freeInstanceList r))]
-      [(DivW l r) (append (freeInstanceList l) (freeInstanceList r))]
+      [(AddW l r) (if (eq? l r) (freeInstanceList l)(append (freeInstanceList l) (freeInstanceList r)))]
+      [(SubW l r) (if (eq? l r) (freeInstanceList l)(append (freeInstanceList l) (freeInstanceList r)))]
+      [(MulW l r) (if (eq? l r) (freeInstanceList l)(append (freeInstanceList l) (freeInstanceList r)))]
+      [(DivW l r) (if (eq? l r) (freeInstanceList l)(append (freeInstanceList l) (freeInstanceList r)))]
       [(WithW bound-id named-expr bound-body)
        (freeInstanceList (substW bound-body
                     bound-id
@@ -274,4 +274,8 @@
 (test (freeInstanceList(parseW "{with {x g} x}")) => '(g))
 (test (freeInstanceList(parseW "{with {x g}}")) =error> "bad `with' syntax in")
 (test (freeInstanceList(parseW "{ 8 {x g}}")) =error> "bad syntax in")
-(test (freeInstanceList (WithW 'x (IdW 'g) (AddW (IdW 'x) (NumW 3)))) => '(g))
+(test (freeInstanceList (WithW 'x (IdW 'g) (AddW (IdW 'x) (IdW 'x)))) => '(g))
+(test (freeInstanceList (parseW "{with { y {/ z 3}  } {+ y y } }")) => '(z))
+(test (freeInstanceList (parseW "{with { y {/ z 3}  } {- y y } }")) => '(z))
+(test (freeInstanceList (parseW "{with { y {/ z 3}  } {* y y } }")) => '(z))
+(test (freeInstanceList (parseW "{with { y {/ z 3}  } {/ y y } }")) => '(z))
